@@ -31,9 +31,9 @@ protected:										//inheritance used, hence protected
 	vector <double> store_load_force_location_end;			//store the load force location
 	vector <double> store_load_force_location_centroid;		//centroid of the force
 	vector <double> store_support_location;					//LOCATION of support.
-	vector <double> store_support_magnitude;
-	vector <double> store_moments_point_force;
-	vector <double> store_moments_load_force;
+	vector <double> store_support_magnitude;			// store the location of the supprots (m)
+	vector <double> store_moments_point_force;			// stores the sum of moments for the point force 
+	vector <double> store_moments_load_force;			// stores the sum of of moments for the load force
 	vector <double> store_force;							//store the force magnitude
 	vector <double> store_location;							//store the vector magnitude
 
