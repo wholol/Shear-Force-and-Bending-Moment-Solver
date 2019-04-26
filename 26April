@@ -28,7 +28,7 @@ protected:										//inheritance used, hence protected
 	vector <double> load_force_locaton_end;				//stores the end of the load force lcoation.
 	vector <double> load_force_centroid_location;		//centroid of the force
 	
-	vector <double> support_location;					//support location.
+	vector <double> support_location;					//support location
 	vector <double> support_magnitude;					// store the location of the supprots (m)
 	
 	vector <double> point_force_moments;				// stores the sum of moments for the point force 
