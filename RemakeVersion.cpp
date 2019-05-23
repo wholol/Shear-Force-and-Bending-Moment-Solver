@@ -2,7 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <math.h>
-
+#include <iomanip>      // std::setprecision
 using namespace std;
 
 class beamProperties {
@@ -170,7 +170,8 @@ public:
 		}
 
 		int shearsize = 0;			//initialize varialbe called shear size
-		double j = 0;			
+		int j = 0;		
+		
 		while (1) {
 			for (int h = 3; h < PointLoadPair.size(); h += 3) {	
 				if (j == h - 1) {		//since we dont want to compute for i
@@ -178,8 +179,9 @@ public:
 				}
 			}
 			//cout << j << " " << shearsize << endl;
-			for (double k = PointLoadPair[j].first; k <= PointLoadPair[j + 1].first; k += 0.2) {		//for each point load pair location.
-				ShearLocationSuperposition.push_back(k);
+			for (double k = (PointLoadPair[j].first)*10; k <= (PointLoadPair[j + 1].first)*10; k++) {		//for each point load pair location.
+			
+				ShearLocationSuperposition.push_back(k / 10);
 				PointShearSuperposition.push_back(PointShearVect[shearsize]);
 			}
 				j = j + 1;
@@ -190,20 +192,15 @@ public:
 			}	
 		}		
 
+		
+
 		for (int i = 0; i < ShearLocationSuperposition.size(); i++) {
-			cout << ShearLocationSuperposition[i] << " <--- Location Plot || Shear value Plot --> " << PointShearSuperposition[i] << endl;
+			cout << std::setprecision(4) << ShearLocationSuperposition[i] << " <--- Location Plot || Shear value Plot --> " << PointShearSuperposition[i] << endl;
 		}
 		
-		for (int i = 2; i <= PointLoadNumber; i++) {
-			for (int j = 0; j < (beamlength / 0.2); j++) {
-				PointShearFinal.push_back(PointShearSuperposition[j] + PointShearSuperposition[j*i]);
-			}
-		}
+		
 
-		for (int i = 0; i < PointShearFinal.size(); i++) {
-			cout << PointShearFinal[i] << " <----FINAL VALUES || FINAL LOCATION---->" << ShearLocationFinal[i] << endl;
-		}
-	
+		
 
 	}
 	
