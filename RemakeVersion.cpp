@@ -192,16 +192,22 @@ public:
 			}	
 		}		
 
-		
 
 		for (int i = 0; i < ShearLocationSuperposition.size(); i++) {
-			cout << std::setprecision(4) << ShearLocationSuperposition[i] << " <--- Location Plot || Shear value Plot --> " << PointShearSuperposition[i] << endl;
+			cout << std::setprecision(4) << ShearLocationSuperposition[i] << " <--- Location Plot || Shear value Superposition --> " << PointShearSuperposition[i] << endl;
 		}
-		
-		
+
+		for (int j = 1; j <= PointLoadNumber - 1; j++) {
+			for (int i = 0; i < (PointShearSuperposition.size() / PointLoadNumber); i++){
+				PointShearFinal.push_back(PointShearSuperposition[i + j*((PointShearSuperposition.size() / PointLoadNumber) - 1)] + PointShearSuperposition[i]);
+			}
+		}
 
 		
 
+		for (int i = 0; i < PointShearFinal.size(); i++) {
+			cout << ShearLocationSuperposition[i] << "<----LOCATION || SHEAR VALUE FINAL ---->" << PointShearFinal[i] <<  endl;
+		}
 	}
 	
 
