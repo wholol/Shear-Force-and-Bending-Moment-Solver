@@ -112,6 +112,8 @@ protected:
 	vector <double> PointShearSuperposition;		// this value stores the values for the point load shears for each superposition.
 	vector <double> ShearLocationFinal;				//final plots after superpostion
 	vector <double> PointShearFinal;				//final shear values.
+	vector <double> removeShear;					//remove redundant shear laods by the point load
+	int element = 0;
 
 public:
 	void PointLoadShearSetup() {			//this function computes each instance of the point load shear
@@ -170,41 +172,57 @@ public:
 		}
 
 		int shearsize = 0;			//initialize varialbe called shear size
-		int j = 0;		
-		
-		while (1) {
+		int increment = 0;		
+		while (1) {			//this while loop produces the
 			for (int h = 3; h < PointLoadPair.size(); h += 3) {	
-				if (j == h - 1) {		//since we dont want to compute for i
-					j = h;			
+				if (increment == h - 1) {		//since we dont want to compute for i
+					increment = h;
 				}
 			}
 			//cout << j << " " << shearsize << endl;
-			for (double k = (PointLoadPair[j].first)*10; k <= (PointLoadPair[j + 1].first)*10; k++) {		//for each point load pair location.
-			
-				ShearLocationSuperposition.push_back(k / 10);
-				PointShearSuperposition.push_back(PointShearVect[shearsize]);
+			for (double k = (PointLoadPair[increment].first) * 10; k <= (PointLoadPair[increment + 1].first) * 10; k++) {		//for each point load pair location.
+						ShearLocationSuperposition.push_back(k / 10);											//push back the location distance, incremented by 0.2
+						PointShearSuperposition.push_back(PointShearVect[shearsize]);							//push back the shear force value.
+						for (int i = 1; i < PointLoadPair.size(); i += 3) {										//installs the extra shear vvalues
+							if (k == PointLoadPair[i].first*10) {
+								ShearLocationSuperposition.push_back(k / 10);
+								PointShearSuperposition.push_back(PointShearVect[shearsize]);
+							}
+						}
 			}
-				j = j + 1;
-				shearsize += 1;
-			
+			increment = increment + 1;
+			shearsize += 1;
 			if (shearsize >= PointShearVect.size()) {
 				break;
 			}	
 		}		
 
-
-		for (int i = 0; i < ShearLocationSuperposition.size(); i++) {
-			cout << std::setprecision(4) << ShearLocationSuperposition[i] << " <--- Location Plot || Shear value Superposition --> " << PointShearSuperposition[i] << endl;
-		}
-
-		for (int j = 1; j <= PointLoadNumber - 1; j++) {
-			for (int i = 0; i < (PointShearSuperposition.size() / PointLoadNumber); i++){
-				PointShearFinal.push_back(PointShearSuperposition[i + j*((PointShearSuperposition.size() / PointLoadNumber) - 1)] + PointShearSuperposition[i]);
+		for (int i = 1; i < ShearLocationSuperposition.size() - 1; i++) {
+			if (PointShearSuperposition[i - 1] != PointShearSuperposition[i] && ShearLocationSuperposition[i] == ShearLocationSuperposition[i - 1]) {
+				cout << i << endl;
+				cout << PointShearSuperposition[i - 1] << " "  << PointShearSuperposition[i] << " " << ShearLocationSuperposition[i] << " " << ShearLocationSuperposition[i - 1] << endl;
+				removeShear.push_back(i);
 			}
 		}
 
+		for (int j = 0; j < removeShear.size(); j++) {		//thi loop is rsponsible fo removing assitional shear forces.
+			PointShearSuperposition.erase(PointShearSuperposition.begin() + removeShear[j] - element);
+			PointShearSuperposition.erase(PointShearSuperposition.begin() + removeShear[j] - 1 - element);
+			ShearLocationSuperposition.erase(ShearLocationSuperposition.begin() + removeShear[j] - element);
+			ShearLocationSuperposition.erase(ShearLocationSuperposition.begin() + removeShear[j] - 1 - element);
+			element += 2;
+		}
 		
+		for (int i = 0; i < ShearLocationSuperposition.size(); i++) {
+			cout << ShearLocationSuperposition[i] << " <--- Location Plot || Shear value Superposition --> " << PointShearSuperposition[i] << endl;
+		}
 
+		for (int i = 0; i <= (ShearLocationSuperposition.size() / PointLoadNumber) - 1; i++) { //this loop sums all the point loads together.
+			for (int k = 1; k < PointLoadNumber; k++) {											// for each instance of point load
+				PointShearFinal.push_back(PointShearSuperposition[i] + k*PointShearSuperposition[(k*ShearLocationSuperposition.size()/PointLoadNumber) + i]);
+			}
+		}
+		
 		for (int i = 0; i < PointShearFinal.size(); i++) {
 			cout << ShearLocationSuperposition[i] << "<----LOCATION || SHEAR VALUE FINAL ---->" << PointShearFinal[i] <<  endl;
 		}
