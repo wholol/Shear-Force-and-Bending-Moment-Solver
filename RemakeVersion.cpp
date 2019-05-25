@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <math.h>
 #include <iomanip>      // std::setprecision
+
 using namespace std;
 
 class beamProperties {
@@ -106,14 +107,16 @@ protected:
 	vector <double> PointForceVal;			//stores all point force values, including support reactions.
 	vector <double> PointForceLocal;		//stores all point force locations, including support values.
 	vector <pair <double, double>> PointLoadPair;					//pairs the pint load magnitude and location.
-	vector <double> PointShearVect;
-
+	vector <pair <double, double>> PointShearFinalPair;					//pairs the final shear force value and location for point load.
+	vector <double> PointShearVect;				//stores the shear forces.
+		
 	vector <double> ShearLocationSuperposition;		// this location vector stores the location for shear for each superposition
 	vector <double> PointShearSuperposition;		// this value stores the values for the point load shears for each superposition.
 	vector <double> ShearLocationFinal;				//final plots after superpostion
 	vector <double> PointShearFinal;				//final shear values.
 	vector <double> removeShear;					//remove redundant shear laods by the point load
 	int element = 0;
+	int storeLastLocation;							//stores the last element of the shear lcoation before adding zeros.
 
 public:
 	void PointLoadShearSetup() {			//this function computes each instance of the point load shear
@@ -128,10 +131,6 @@ public:
 
 		for (int i = 0; i < PointForceLocal.size() ; i++) {								//sorting the store_location vetor and store_force vector
 			PointLoadPair.push_back(make_pair(PointForceLocal[i], PointForceVal[i]));	//sorts location vector.
-		}
-
-		for (float i = 0; i <= beamlength; i += 0.2) {		//location vector for the final shear
-			ShearLocationFinal.push_back(i);
 		}
 
 		/*for (int i = 0; i < PointLoadPair.size(); i++) {
@@ -182,14 +181,6 @@ public:
 			}
 			//cout << j << " " << shearsize << endl;
 
-			for (int i = 0; i < PointLoadPair.size(); i+=3) {						//this loop adds zeros in the event where the smallest location is not zero (to balance the vector segments).
-				if (increment == i && PointLoadPair[i].first != 0) {
-					for (double j = 0; j <= (PointLoadPair[increment].first) * 10; j++) {
-						ShearLocationSuperposition.push_back(j / 10);
-						PointShearSuperposition.push_back(0);
-					}
-				}
-			}
 
 			for (double k = (PointLoadPair[increment].first) * 10; k <= (PointLoadPair[increment + 1].first) * 10; k++) {		//for each point load pair location.
 				ShearLocationSuperposition.push_back(k / 10);											//push back the location distance, incremented by 0.2
@@ -203,16 +194,6 @@ public:
 				}
 			}
 
-
-			for (int y = 2; y < PointLoadPair.size(); y += 3) {			//checks the biggest location to see if it is the beamlength or not. This loop is used to balanced arrays as well.
-				if (PointLoadPair[y].first != beamlength && increment + 1 == y) {				//if the last location of each force instance is not the beamlengh itself
-					for (double l = PointLoadPair[increment + 1].first*10; l <= beamlength*10; l++) {
-						ShearLocationSuperposition.push_back(l / 10 + (0.2));
-						PointShearSuperposition.push_back(0);		//push back zero
-					}
-				}
-			}
-
 			increment = increment + 1;
 			shearsize += 1;
 			if (shearsize >= PointShearVect.size()) {
@@ -221,15 +202,11 @@ public:
 		}		
 
 		for (int i = 1; i < ShearLocationSuperposition.size() - 1; i++) {
-			for (int j = 2; j < PointLoadPair.size(); j += 3) {
-				for (int k = 0; k < PointLoadPair.size(); k += 3) {
 					if ((PointShearSuperposition[i - 1] != PointShearSuperposition[i]) && (ShearLocationSuperposition[i] == ShearLocationSuperposition[i - 1])) {	//if the force value is different and the location is the same, provided that the location is not the first or lat location.
 						cout << i << endl;
 						cout << PointShearSuperposition[i - 1] << " " << PointShearSuperposition[i] << " " << ShearLocationSuperposition[i] << " " << ShearLocationSuperposition[i - 1] << endl;
 						removeShear.push_back(i);
 					}
-				}
-			}
 		}
 
 		for (int j = 0; j < removeShear.size(); j++) {		//thi loop is rsponsible fo removing assitional shear forces caused by the addtion of shear forces.
@@ -242,12 +219,19 @@ public:
 		
 		for (int i = 0; i < ShearLocationSuperposition.size(); i++) {
 			cout << ShearLocationSuperposition[i] << " <--- Location Plot || Shear value Superposition --> " << PointShearSuperposition[i] << endl;
+			
 		}
 
 		for (int i = 0; i <= (ShearLocationSuperposition.size() / PointLoadNumber) - 1; i++) {	//pushes back the first force values into the final shear force array
 			PointShearFinal.push_back(PointShearSuperposition[i]);
 		}
 
+		for (int i = 0; i < PointShearFinal.size(); i++) {
+			ShearLocationFinal.push_back(ShearLocationSuperposition[i]);
+		}
+
+		storeLastLocation = ShearLocationFinal[PointShearFinal.size() - 1];		//stores the last lcoation of the shear force (this variable is used to add zeroes if the last lcoation != beamlength.
+	
 		if (PointLoadNumber != 1) {					//if there is more than one point load, the superposition vector is split into parts and added to each index.
 			for (int k = 1; k < PointLoadNumber; k++) {		//for each each instance of point load.
 				for (int i = 0; i <= (ShearLocationSuperposition.size() / PointLoadNumber) - 1; i++) { //this loop sums all the point loads together.
@@ -255,9 +239,35 @@ public:
 				}
 			}
 		}
-		
-		for (int i = 0; i < PointShearFinal.size(); i++) {
-			cout << ShearLocationSuperposition[i] << "<----LOCATION || SHEAR VALUE FINAL ---->" << PointShearFinal[i] <<  endl;
+
+		if (ShearLocationFinal[0] != 0) {										//if the initial location is not zero, fill the beam with zero values and forces.
+			for (double i = 0*10; i <= ShearLocationFinal[0]*10; i++) {
+				
+				ShearLocationFinal.push_back(i / 10);
+				PointShearFinal.push_back(0);
+			}
+		}
+
+		if (storeLastLocation <= beamlength) {		// if the final locationis not the beamlength.
+			cout << storeLastLocation << endl;
+			for (double i = storeLastLocation*10 + 2; i <= beamlength*10; i++) {
+				ShearLocationFinal.push_back(i / 10);
+				PointShearFinal.push_back(0);
+
+			}
+			ShearLocationFinal.push_back(storeLastLocation + 0.00001);
+			PointShearFinal.push_back(0);
+		}
+
+		for (int i = 0; i < PointShearFinal.size(); i++) {			//create a pair vector for the final shear location vector and the final shear force vector
+			PointShearFinalPair.push_back(make_pair(ShearLocationFinal[i], PointShearFinal[i]));
+		}
+
+		sort(PointShearFinalPair.begin(), PointShearFinalPair.end());		//sorts the final shear force pairs.
+
+
+		for (int i = 0; i < PointShearFinalPair.size(); i++) {
+			cout << PointShearFinalPair[i].first << "<----LOCATION || SHEAR VALUE FINAL ---->" << PointShearFinalPair[i].second <<  endl;
 		}
 	}
 	
