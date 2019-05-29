@@ -2,9 +2,12 @@
 #include <vector>
 #include <algorithm>
 #include <math.h>
-#include <iomanip>      // std::setprecision
+#include <fstream>
 
 using namespace std;
+
+ofstream Shear_force("shear_force.csv"); //instantiate object for writing data to csv file
+ofstream bendingmoments("bending_moments.csv"); //instantiate object for beding moments csv file
 
 class beamProperties {
 
@@ -123,12 +126,14 @@ protected:
 	vector <double> removeShear;					//remove redundant shear laods by the point load
 	int element = 0;
 	int storeLastLocation;							//stores the last element of the shear lcoation before adding zeros.
-	int MaxLocation = 0, MinLocation = 0;					//stores the maximum and mnium location of all superpositions to determine transition regions
+
 
 	vector <double> UDLForceVal;	//includes all force values, including
 	vector <double> UDLForceLocal;
 	vector <double> UDLSuperpositionLocation;
 	vector <double> UDLSuperpositionShear;
+	vector <double> UDLShearFinal;
+	vector <double> UDLLocationFinal;
 
 public:
 	void PointLoadShearSetup() {			//this function computes each instance of the point load shear
@@ -166,25 +171,11 @@ public:
 			}
 		}
 
-
-		for (int i = 0; i < PointLoadPair.size(); i++) {			//determines the max and min location of all superposition values
-			if (PointLoadPair[i].first > MaxLocation) {
-				MaxLocation = PointLoadPair[i].first;
-
-			}
-
-			if (PointLoadPair[i].first <= MinLocation) {
-				MinLocation = PointLoadPair[i].first;
-			}
-
-		}
-
 		for (int i = 0; i < PointLoadPair.size(); i++) {
 			//cout << "force number  " << i << endl;
 			cout << PointLoadPair[i].first << " <- location of forces/supports || local force-> " << PointLoadPair[i].second << endl;
 
 		}
-		cout << MinLocation << " <- Min Location || Max Location ->" << MaxLocation << endl;
 	}
 
 	void ComputePointShear() {//computes the shear forces for the point load forces.
@@ -370,40 +361,88 @@ public:
 		for (int i = 0; i < UDLSuperpositionLocation.size(); i++) {			//intiialize superposition shear forces to zero.
 			UDLSuperpositionShear.push_back(0);
 		}
+
+		for (int i = 0; i < UDLlocation_beginVect.size(); i++) {
+			cout << UDLlocation_beginVect[i] << " <- begin" << UDLlocation_endVect[i] << "<- end" << UDLLeftSupports[i] << "<-- left supp" << UDLRightSupports[i] << endl;
+		}
 	
 		int increment_location = 0, increment_size = (UDLSuperpositionLocation.size() / UDLnumber) - 1;
 		int counter = 1;
 			
-		for (int i = 1; i <=UDLnumber; i++){		//for each instance of UDL load
+				//for each instance of UDL load, compute each superposition shear
 				cout << "test" << endl;
 				cout << increment_location << endl;
 				cout << increment_size << endl;
 				cout << UDLSuperpositionLocation.size() << endl;
-				for (int i = 0; i < UDLmagnitudeVect.size(); i++) {		//for each instance of UDL magnitude
-					for (int j = increment_location; j <= increment_size; j++) {
+				for (int i = 0; i < UDLlocation_beginVect.size(); i++) {		//for each instance of UDL magnitude
 					
-						if (UDLSuperpositionLocation[j] <= UDLlocation_beginVect[i]) {		//while the location is smaller of equalto the the begining value of the UDL.
-							UDLSuperpositionShear[j] = UDLLeftSupports[i];						//set the shear V be the left support reaction value
-						}
+						for (int j = increment_location; j <= increment_size; j++) {
 
-						if ((UDLSuperpositionLocation[j] > UDLlocation_beginVect[i]) && (UDLSuperpositionLocation[j] < UDLlocation_endVect[i])) {	//if it is at the region of UDL
-							UDLSuperpositionShear[j] = UDLLeftSupports[i] + UDLmagnitudeVect[i] * (UDLSuperpositionLocation[j] - UDLlocation_beginVect[i]);		// V = R + w(x - beginning location), where by w can be both postiive or negative.
-						}
+							if (UDLSuperpositionLocation[j] <= UDLlocation_beginVect[i]) {		//while the location is smaller of equalto the the begining value of the UDL.
+								cout << i << endl;
+								UDLSuperpositionShear[j] = UDLLeftSupports[i];						//set the shear V be the left support reaction value
+							}
 
-						if (UDLSuperpositionLocation[j] >= UDLlocation_endVect[i]) {		//after the UDL
-							UDLSuperpositionShear[j] = -UDLRightSupports[i];				//V = -supportreaction
+							if ((UDLSuperpositionLocation[j] > UDLlocation_beginVect[i]) && (UDLSuperpositionLocation[j] < UDLlocation_endVect[i])) {	//if it is at the region of UDL
+								UDLSuperpositionShear[j] = UDLLeftSupports[i] + UDLmagnitudeVect[i] * (UDLSuperpositionLocation[j] - UDLlocation_beginVect[i]);		// V = R + w(x - beginning location), where by w can be both postiive or negative.
+							}
+
+							if (UDLSuperpositionLocation[j] >= UDLlocation_endVect[i]) {		//after the UDL
+								UDLSuperpositionShear[j] = -UDLRightSupports[i];				//V = -supportreaction
+								
+							}
+							if (increment_location < (UDLSuperpositionLocation.size() - 1) && increment_size < (UDLSuperpositionLocation.size() - 1)) {	//prevent segfault
+								increment_location += (UDLSuperpositionLocation.size() / UDLnumber);		//increment the initial superpositino lcoation
+								increment_size += (UDLSuperpositionLocation.size() / UDLnumber);			//increment the the last element for each superposition
+								cout << increment_location << endl;
+								cout << increment_size << endl;
+							}			
 						}
-					}
+					
 				}
-				increment_location += (UDLSuperpositionLocation.size() / UDLnumber);		//increment the initial superpositino lcoation
-				increment_size += (UDLSuperpositionLocation.size() / UDLnumber);			//increment the the last element for each superposition
-		}
-		
-
+				
 		for (int i = 0; i < UDLSuperpositionLocation.size(); i++) {
 			cout << UDLSuperpositionLocation[i] << "<-- UDL SUPERPOSITION LOCATION || UDL SUPERPOSITION  SHEAR-->" << UDLSuperpositionShear[i] << endl;
 		}
+
+		for (int i = 0; i < (UDLSuperpositionLocation.size() / UDLnumber); i++) {		//this loop initializes the final location and shear values.
+			UDLLocationFinal.push_back(UDLSuperpositionLocation[i]);
+			UDLShearFinal.push_back(UDLSuperpositionShear[i]);
+		}
+
+		for (int k = 1; k < UDLnumber; k++) {			//this loop adds all the superposition values into a final value.
+			for (int i = 0; i <= (UDLSuperpositionLocation.size() / UDLnumber) - 1; i++) {
+				UDLShearFinal[i] += UDLSuperpositionShear[k*(UDLSuperpositionLocation.size() /UDLnumber) + i];
+			}
+		}
+
+		for (int i = 0; i < UDLShearFinal.size(); i++) {			//prints out the 
+			cout << UDLLocationFinal[i] << "<--- final Uniform distributed location|| final UDL shear --->" << UDLShearFinal[i] << endl;
+		}
 	}	
+
+	void ParseShearData() {			//parses data to excel
+		if (PointLoadNumber > 0 && UDLnumber == 0) {		//if there is only point load
+			Shear_force << "location" << "," << "Shear Force" << endl;
+			for (int i = 0; i < PointShearFinal.size(); i++) {
+				Shear_force << PointShearFinalPair[i].first << "," << PointShearFinalPair[i].second << endl;
+			}
+		}
+
+		if (PointLoadNumber == 0 && UDLnumber > 0) {		//if there is only UDL 
+			Shear_force << "location" << "," << "Shear Force" << endl;
+			for (int i = 0; i < UDLShearFinal.size(); i++) {
+				Shear_force << UDLLocationFinal[i] << "," << UDLShearFinal[i] << endl;
+			}
+		}
+
+		if (PointLoadNumber > 0 && UDLnumber > 0) {		//if both loads exists
+			Shear_force << "location" << "," << "Shear Force" << endl;
+			for (int i = 0; i < PointLoadPair.size(); i++) {
+				Shear_force << (PointLoadPair[i].first += UDLLocationFinal[i]) << "," << (PointShearFinalPair[i].second += UDLShearFinal[i]) << endl;
+			}
+		}
+	}
 
 };
 
@@ -412,6 +451,9 @@ class BendingMoments :public ShearForces {
 protected:
 	vector <double> PointLoadSuperPositionMoments;
 	vector <double> PointMomentsFinal;
+
+	vector <double> UDLSuperPositionMoments;
+	vector <double> UDLMomentsFinal;
 	
 public:
 
@@ -481,11 +523,14 @@ int main() {
 		beam.PointLoadShearSetup();
 		beam.ComputePointShear();
 		beam.ComputePointLoadMoments();
+		beam.ParseShearData();
 	}
 
 	if (beam.getUDLNumber() != 0) {
 		beam.UDLSupports();
 		beam.computeUDLShear();
+		beam.computeUDLMoments();
+		beam.ParseShearData();
 	}
 	system("pause");
 
