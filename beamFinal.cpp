@@ -470,25 +470,26 @@ public:
 		int counttransition = 1;
 		int pointshearsuperpositionlocation = 0; int pointshear_size = (ShearLocationSuperposition.size() / PointLoadNumber) - 1;
 		
-		for (int k = 1; k <= PointLoadNumber; k++){		//for each instance of point load
+		for (int z = 1; z < PointLoadPair.size(); z+=3){		//for each instance of point load
 			for (int i = pointshearsuperpositionlocation; i < pointshear_size; i++) {			//for all superposition values
-				if ((i + 1) < ShearLocationSuperposition.size()) {
-					if ((ShearLocationSuperposition[i] == ShearLocationSuperposition[i + 1]) && (PointShearSuperposition[i] != PointShearSuperposition[i + 1] && ShearLocationSuperposition[i] == PointLoadPair[counttransition].first)) {	//is the location is of the same value but different force value.
-						cout << ShearLocationSuperposition[i] << " <<egeg" << PointLoadPair[counttransition].first << endl;
+			
+					if ((ShearLocationSuperposition[i] == ShearLocationSuperposition[i + 1]) && (PointShearSuperposition[i] != PointShearSuperposition[i + 1] && ShearLocationSuperposition[i] == PointLoadPair[z].first)) {	//is the location is of the same value but different force value.
 						for (int k = 0; k <= i; k++) {
-							PointLoadSuperPositionMoments[k] = (ShearLocationSuperposition[k] * PointShearSuperposition[k]);		//compute the moment of the first half
+							PointLoadSuperPositionMoments[k] = (ShearLocationSuperposition[k] * PointShearSuperposition[k]);		//compute the moment of the first half, M = V*x
 						}
 						for (int j = i + 1; j < ShearLocationSuperposition.size(); j++) {						//compute the moment of the second half.
 							//cout << ShearLocationSuperposition[j] << " " << PointShearSuperposition[j]<< endl;
-							PointLoadSuperPositionMoments[j] = ((ShearLocationSuperposition[j] * PointShearSuperposition[j]) - (PointShearSuperposition[j] * beamlength));
+							PointLoadSuperPositionMoments[j] = ((ShearLocationSuperposition[j] * PointShearSuperposition[j]) - (PointShearSuperposition[j] * beamlength));		// M = mx + c, m = shear force, c = (-V*beamlength).
+							cout << PointLoadSuperPositionMoments[i + 1] << endl;
+							cout << PointLoadSuperPositionMoments[51] << endl;
 						}
+						cout << PointShearSuperposition[i] << " <<egeg" << PointShearSuperposition[i + 1] << endl;
 					}
-				}
 
 				if (pointshearsuperpositionlocation < (ShearLocationSuperposition.size() - 1) && pointshear_size < (ShearLocationSuperposition.size() - 1)) {
 					pointshearsuperpositionlocation += (ShearLocationSuperposition.size() / PointLoadNumber);
 					pointshear_size += (ShearLocationSuperposition.size() / PointLoadNumber);
-					counttransition += 3;
+					
 				}
 			}
 			
@@ -496,7 +497,8 @@ public:
 
 		for (int i = 0; i < PointLoadSuperPositionMoments.size(); i++) {
 			cout << ShearLocationSuperposition[i] << "<-- location superpostion || moment superposition -->" << PointLoadSuperPositionMoments[i] << endl;
-		}
+			cout << PointLoadSuperPositionMoments[51] << endl;
+ 		}
 
 		for (int i = 0; i <= (PointLoadSuperPositionMoments.size() / PointLoadNumber) - 1; i++) {	//pushes back the first moment values into the final moment
 		PointMomentsFinal.push_back(PointLoadSuperPositionMoments[i]);
