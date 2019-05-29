@@ -6,8 +6,7 @@
 
 using namespace std;
 
-ofstream Shear_force("shear_force.csv"); //instantiate object for writing data to csv file
-ofstream bendingmoments("bending_moments.csv"); //instantiate object for beding moments csv file
+ofstream parsedata("shear_force and bending moments.csv"); //instantiate object for writing data to csv file
 
 class beamProperties {
 
@@ -423,24 +422,30 @@ public:
 
 	void ParseShearData() {			//parses data to excel
 		if (PointLoadNumber > 0 && UDLnumber == 0) {		//if there is only point load
-			Shear_force << "location" << "," << "Shear Force" << endl;
+			parsedata << "location" << "," << "Shear Force" << endl;
+			parsedata << 0 << "," << 0 << endl;
 			for (int i = 0; i < PointShearFinal.size(); i++) {
-				Shear_force << PointShearFinalPair[i].first << "," << PointShearFinalPair[i].second << endl;
+				parsedata << PointShearFinalPair[i].first << "," << PointShearFinalPair[i].second << endl;
 			}
+			parsedata << beamlength << "," << 0 << endl;
 		}
 
 		if (PointLoadNumber == 0 && UDLnumber > 0) {		//if there is only UDL 
-			Shear_force << "location" << "," << "Shear Force" << endl;
+			parsedata << "location" << "," << "Shear Force" << endl;
+			parsedata << 0 << "," << 0 << endl;
 			for (int i = 0; i < UDLShearFinal.size(); i++) {
-				Shear_force << UDLLocationFinal[i] << "," << UDLShearFinal[i] << endl;
+				parsedata << UDLLocationFinal[i] << "," << UDLShearFinal[i] << endl;
 			}
+			parsedata << beamlength << "," << 0 << endl;
 		}
 
 		if (PointLoadNumber > 0 && UDLnumber > 0) {		//if both loads exists
-			Shear_force << "location" << "," << "Shear Force" << endl;
-			for (int i = 0; i < PointLoadPair.size(); i++) {
-				Shear_force << (PointLoadPair[i].first += UDLLocationFinal[i]) << "," << (PointShearFinalPair[i].second += UDLShearFinal[i]) << endl;
+			parsedata << "location" << "," << "Shear Force" << endl;
+			parsedata << 0 << "," << 0 << endl;
+			for (int i = 0; i < PointShearFinalPair.size(); i++) {
+				parsedata << (UDLLocationFinal[i]) << "," << (PointShearFinalPair[i].second += UDLShearFinal[i]) << endl;
 			}
+			parsedata << beamlength << "," << 0 << endl;
 		}
 	}
 
@@ -462,36 +467,45 @@ public:
 		for (int i = 0; i < ShearLocationSuperposition.size(); i++) {		//intiialzie superpostion moments vector
 			PointLoadSuperPositionMoments.push_back(0);
 		}
-
-		for (int i = 0; i < ShearLocationSuperposition.size(); i++) {			//for all superposition values
-			
-			if ((i + 1) < ShearLocationSuperposition.size()) {
-				if ((ShearLocationSuperposition[i] == ShearLocationSuperposition[i + 1]) && (PointShearSuperposition[i] != PointShearSuperposition[i + 1])) {	//is the location is of the same value but different force value.
-					
-					for (int k = 0; k <= i; k++) {
-						PointLoadSuperPositionMoments[k] = (ShearLocationSuperposition[k] * PointShearSuperposition[k]);		//compute the moment of the first half
-					}
-
-					for (int j = i + 1; j < ShearLocationSuperposition.size(); j++) {						//compute the moment of the second half.
-						cout << ShearLocationSuperposition[j] << " " << PointShearSuperposition[j]<< endl;
-						PointLoadSuperPositionMoments[i] = (ShearLocationSuperposition[i] * PointShearSuperposition[i]);
-						PointLoadSuperPositionMoments[j] = ((ShearLocationSuperposition[j] * PointShearSuperposition[j]) - (PointShearSuperposition[j] * beamlength));
+		int counttransition = 1;
+		int pointshearsuperpositionlocation = 0; int pointshear_size = (ShearLocationSuperposition.size() / PointLoadNumber) - 1;
+		
+		for (int k = 1; k <= PointLoadNumber; k++){		//for each instance of point load
+			for (int i = pointshearsuperpositionlocation; i < pointshear_size; i++) {			//for all superposition values
+				if ((i + 1) < ShearLocationSuperposition.size()) {
+					if ((ShearLocationSuperposition[i] == ShearLocationSuperposition[i + 1]) && (PointShearSuperposition[i] != PointShearSuperposition[i + 1] && ShearLocationSuperposition[i] == PointLoadPair[counttransition].first)) {	//is the location is of the same value but different force value.
+						cout << ShearLocationSuperposition[i] << " <<egeg" << PointLoadPair[counttransition].first << endl;
+						for (int k = 0; k <= i; k++) {
+							PointLoadSuperPositionMoments[k] = (ShearLocationSuperposition[k] * PointShearSuperposition[k]);		//compute the moment of the first half
+						}
+						for (int j = i + 1; j < ShearLocationSuperposition.size(); j++) {						//compute the moment of the second half.
+							//cout << ShearLocationSuperposition[j] << " " << PointShearSuperposition[j]<< endl;
+							PointLoadSuperPositionMoments[j] = ((ShearLocationSuperposition[j] * PointShearSuperposition[j]) - (PointShearSuperposition[j] * beamlength));
+						}
 					}
 				}
+
+				if (pointshearsuperpositionlocation < (ShearLocationSuperposition.size() - 1) && pointshear_size < (ShearLocationSuperposition.size() - 1)) {
+					pointshearsuperpositionlocation += (ShearLocationSuperposition.size() / PointLoadNumber);
+					pointshear_size += (ShearLocationSuperposition.size() / PointLoadNumber);
+					counttransition += 3;
+				}
 			}
+			
 		}
 
-		//for (int i = 0; i < PointLoadSuperPositionMoments.size(); i++) {
-		//	cout << PointLoadSuperPositionMoments[i] << "<-- moment || location -->" << ShearLocationSuperposition[i] << endl;
-		//}
+		for (int i = 0; i < PointLoadSuperPositionMoments.size(); i++) {
+			cout << ShearLocationSuperposition[i] << "<-- location superpostion || moment superposition -->" << PointLoadSuperPositionMoments[i] << endl;
+		}
 
 		for (int i = 0; i <= (PointLoadSuperPositionMoments.size() / PointLoadNumber) - 1; i++) {	//pushes back the first moment values into the final moment
-		PointMomentsFinal.push_back(PointShearSuperposition[i]);
+		PointMomentsFinal.push_back(PointLoadSuperPositionMoments[i]);
 		}
+
 
 		for (int k = 1; k < PointLoadNumber; k++) {		//for each each instance of point load.
 			for (int i = 0; i <= (PointLoadSuperPositionMoments.size() / PointLoadNumber) - 1; i++) { //this loop sums all the point loads together.
-				PointMomentsFinal[i] += PointShearSuperposition[k*(ShearLocationSuperposition.size() / PointLoadNumber) + i];	//sums the superposition forces together
+				PointMomentsFinal[i] += PointLoadSuperPositionMoments[k*(ShearLocationSuperposition.size() / PointLoadNumber) + i];	//sums the superposition forces together
 			}
 		}
 
@@ -501,12 +515,74 @@ public:
 	}
 
 	void computeUDLMoments() {
+		for (int i = 0; i < UDLSuperpositionLocation.size(); i++) {		//initialize the moments vector
+			UDLSuperPositionMoments.push_back(0);
+		}
 
+		int increment_momentslocation = 0;
+		int increment_momentssize = (UDLSuperpositionLocation.size() / UDLnumber) - 1;
+
+		for (int i = 0; i < UDLlocation_beginVect.size(); i++) {//for each instance of UDL
+			for (int j = increment_momentslocation; j <= increment_momentssize; j++) {
+				if (UDLSuperpositionLocation[j] <= UDLlocation_beginVect[i]) {		//while the location is smaller of equalto the the begining value of the UDL.
+					UDLSuperPositionMoments[j] = UDLLeftSupports[i] * UDLSuperpositionLocation[j];						//set the shear V be the left support reaction value
+				}
+
+				if ((UDLSuperpositionLocation[j] > UDLlocation_beginVect[i]) && (UDLSuperpositionLocation[j] < UDLlocation_endVect[i])) {	//if it is at the region of UDL
+					UDLSuperPositionMoments[j] = (UDLLeftSupports[i] * UDLSuperpositionLocation[j]) + (UDLmagnitudeVect[i] * 0.5 * (UDLSuperpositionLocation[j] - UDLlocation_beginVect[i])*(UDLSuperpositionLocation[j] - UDLlocation_beginVect[i]));		// V = R + w(x - beginning location), where by w can be both postiive or negative.
+				}
+
+				if (UDLSuperpositionLocation[j] >= UDLlocation_endVect[i]) {		//after the UDL
+					UDLSuperPositionMoments[j] = UDLRightSupports[i] * (beamlength - UDLSuperpositionLocation[j]);				//V = -supportreaction
+
+				}
+				if (increment_momentslocation < (UDLSuperpositionLocation.size() - 1) && increment_momentssize < (UDLSuperpositionLocation.size() - 1)) {	//prevent segfault
+					increment_momentslocation += (UDLSuperpositionLocation.size() / UDLnumber);		//increment the initial superpositino lcoation
+					increment_momentssize += (UDLSuperpositionLocation.size() / UDLnumber);			//increment the the last element for each superposition
+					//cout << increment_momentslocation << endl;
+					//cout << increment_momentssize << endl;
+				}
+			}
+		}
+
+		for (int i = 0; i < UDLSuperPositionMoments.size(); i++) {
+			cout << UDLSuperpositionLocation[i] << "<-- SuperPositionLocation UDL || Superposition moments UDL -->" << UDLSuperPositionMoments[i] <<  endl;
+		}
+
+		for (int i = 0; i < (UDLSuperPositionMoments.size() / UDLnumber); i++) {		//this loop initializes the final location and shear values.
+			UDLMomentsFinal.push_back(UDLSuperPositionMoments[i]);
+		}
+
+		for (int k = 1; k < UDLnumber; k++) {			//this loop adds all the superposition values into a final value.
+			for (int i = 0; i <= (UDLSuperPositionMoments.size() / UDLnumber) - 1; i++) {
+				UDLMomentsFinal[i] += UDLSuperPositionMoments[k*(UDLSuperPositionMoments.size() / UDLnumber) + i];
+			}
+		}
 	}
 
 	
-	
+	void ParseMomentsData() {
+		if (PointLoadNumber > 0 && UDLnumber == 0) {		//if there is only point load
+			parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
+			for (int i = 0; i < PointShearFinal.size(); i++) {
+				parsedata << "," << "," << "," << PointShearFinalPair[i].first << "," << PointMomentsFinal[i] << endl;
+			}
+		}
 
+		if (PointLoadNumber == 0 && UDLnumber > 0) {		//if there is only UDL 
+			parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
+			for (int i = 0; i < UDLShearFinal.size(); i++) {
+				parsedata << "," << "," << "," << UDLLocationFinal[i] << "," << UDLMomentsFinal[i] << endl;
+			}
+		}
+
+		if (PointLoadNumber > 0 && UDLnumber > 0) {		//if both loads exists
+			parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
+			for (int i = 0; i < UDLLocationFinal.size(); i++) {
+				parsedata <<"," << "," << "," << (UDLLocationFinal[i]) << "," << (PointMomentsFinal[i] += UDLMomentsFinal[i]) << endl;
+			}
+		}
+	}
 };
 
 int main() {
@@ -523,15 +599,18 @@ int main() {
 		beam.PointLoadShearSetup();
 		beam.ComputePointShear();
 		beam.ComputePointLoadMoments();
-		beam.ParseShearData();
 	}
 
 	if (beam.getUDLNumber() != 0) {
 		beam.UDLSupports();
 		beam.computeUDLShear();
 		beam.computeUDLMoments();
-		beam.ParseShearData();
 	}
+
+	if (beam.getUDLNumber() != 0 || beam.getPointLoadNumber() != 0) {
+		beam.ParseShearData();
+		beam.ParseMomentsData();
+	 }
 	system("pause");
 
 }
