@@ -443,7 +443,13 @@ void ShearForces::computeTDLShear() {
 			}
 
 			if ((TDLSuperpositionLocation[j] > TDLlocation_beginVect[i]) && (TDLSuperpositionLocation[j] < TDLlocation_endVect[i])) {	//if it is at the region of UDL
-				TDLSuperpositionShear[j] = TDLLeftSupports[i] + (TDLmagnitudeVect[i] * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]) * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]))/(2*(TDLlocation_endVect[i] - TDLlocation_beginVect[i]));		// V = R + w(x - beginning location)^2/0.5*(end - begin), where by w can be both postiive or negative.
+				if (TDLgradientVect[i] == 'e') {				//if the gradient is at the end
+					TDLSuperpositionShear[j] = TDLLeftSupports[i] + (TDLmagnitudeVect[i] * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]) * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (2 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i]));
+				}	// V = R + w(x - beginning location)^2/0.5*(end - begin), where by w can be both postiive or negative.
+
+				if (TDLgradientVect[i] == 'b') {			//if the gradient is at the beginning
+					TDLSuperpositionShear[j] = TDLLeftSupports[i] + (TDLmagnitudeVect[i] * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) - (TDLmagnitudeVect[i] * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]) * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (2 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i]));
+				}
 			}
 
 			if (TDLSuperpositionLocation[j] >= TDLlocation_endVect[i]) {		//after the UDL
@@ -660,8 +666,14 @@ void BendingMoments::computeTDLMoments() {
 				TDLSuperPositionMoments[j] = TDLLeftSupports[i] * TDLSuperpositionLocation[j];						//set the shear V be the left support reaction value, M = Vx
 			}
 
-			if ((TDLSuperpositionLocation[j] > TDLlocation_beginVect[i]) && (TDLSuperpositionLocation[j] < TDLlocation_endVect[i])) {	//if it is at the region of UDL
-				TDLSuperPositionMoments[j] = ((TDLLeftSupports[i] * TDLSuperpositionLocation[j]) + ((TDLmagnitudeVect[i])*(TDLSuperpositionLocation[j]-TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j]-TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j]-TDLlocation_beginVect[i]))/(6*(TDLlocation_endVect[i] - TDLlocation_beginVect[i])));		// V = Rx + w(x - beginning location)^3/ (6*end - begin), where by w can be both postiive or negative.
+			if ((TDLSuperpositionLocation[j] > TDLlocation_beginVect[i]) && (TDLSuperpositionLocation[j] < TDLlocation_endVect[i])) {	//if it is at the region of TDL
+				if (TDLgradientVect[i] == 'e') {
+					TDLSuperPositionMoments[j] = ((TDLLeftSupports[i] * TDLSuperpositionLocation[j]) + ((TDLmagnitudeVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (6 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])));		// V = Rx + w(x - beginning location)^3/ (6*end - begin), where by w can be both postiive or negative.
+				}
+
+				if (TDLgradientVect[i] == 'b') {
+					TDLSuperPositionMoments[j] = ((TDLLeftSupports[i] * TDLSuperpositionLocation[j]) + (0.5*TDLmagnitudeVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]) - ((TDLmagnitudeVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (6 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])));	//Rx + w(x - begin) - w*(x - beginning location)^3/ (6*end - begin)
+				}
 			}
 
 			if (TDLSuperpositionLocation[j] >= TDLlocation_endVect[i]) {		//after the UDL
