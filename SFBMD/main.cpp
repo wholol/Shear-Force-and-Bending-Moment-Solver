@@ -8,7 +8,14 @@ int main()
 	beam.initbeam();
 	beam.PointLoadSetup();
 	beam.UDLSetup();
+	beam.TDLSetup();
 	beam.SupportSetup();
+
+	if (beam.getTDLnumber() != 0) {
+		beam.TDLSupports();
+		beam.computeTDLShear();
+		beam.computeTDLMoments();
+	}
 
 
 	if (beam.getPointLoadNumber() != 0) {
@@ -24,11 +31,10 @@ int main()
 		beam.computeUDLMoments();
 	}
 
-	if (beam.getUDLNumber() != 0 || beam.getPointLoadNumber() != 0) {
+	if (beam.getUDLNumber() != 0 || beam.getPointLoadNumber() != 0 || beam.getTDLnumber() != 0) {
 		beam.ParseShearData();
 		beam.ParseMomentsData();
 	}
 	system("pause");
 }
-
 
