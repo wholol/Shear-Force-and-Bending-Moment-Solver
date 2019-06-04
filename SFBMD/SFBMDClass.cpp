@@ -5,12 +5,12 @@
 ofstream parsedata("shear_force and bending moments.csv");
 
 
-void beamProperties::initbeam() {
+void beamProperties::initbeam() {	//insert beamlength
 	cout << "Welcome to the shear force and bending moment solver. Enter beam length to get started." << endl;
 	cin >> beamlength;
 }
 
-void beamProperties::PointLoadSetup() {
+void beamProperties::PointLoadSetup() {		//insert number of point loads and values.
 	cout << "Enter number of point loads that you have." << endl;
 	cin >> PointLoadNumber;
 	cout << "   " << endl;
@@ -29,11 +29,12 @@ void beamProperties::PointLoadSetup() {
 	}
 }
 
-void beamProperties::UDLSetup() {
-	cout << " enter number of distributed loads." << endl;
+void beamProperties::UDLSetup() {		//insert number of UDL loads
+	cout << "Enter number of  UNIFORM distributed loads." << endl;
 	cin >> UDLnumber;
 	for (int i = 0; i < UDLnumber; i++) {
-		cout << "Enter distributed loading w value, followed by its beginninglocation, lastly the end location. (start from left)." << endl;
+		cout << "Enter distributed loading w value, followed by its beginning location, lastly the end location." << endl;
+		cout << " The beginning of the load is at the LEFT side of the beam, and the end at the left." << endl;
 		cin >> UDLmagnitude;
 		UDLmagnitudeVect.push_back(UDLmagnitude);
 		cout << " " << endl;
@@ -41,10 +42,34 @@ void beamProperties::UDLSetup() {
 		cin >> UDLbegin;
 		UDLlocation_beginVect.push_back(UDLbegin);
 		cout << " " << endl;
-		cout << " enter ed of location (from right)" << endl;
+		cout << " enter end of location (from right)" << endl;
 		cin >> UDLend;
 		UDLlocation_endVect.push_back(UDLend);
 
+	}
+}
+
+void beamProperties::TDLSetup() {
+	cout << "Enter number of  TRIANGULAR distributed loads." << endl;
+	cin >> TDLnumber;
+	for (int i = 0; i < TDLnumber; i++) {
+		cout << "Enter distributed loading w value, followed by its beginning location" << endl;
+		cout << "the end location and where the top edge of the triangle is." << endl;
+		cout << " The beginning of the load is at the LEFT side of the beam, and the end at the right." << endl;
+		cout << " " << endl;
+		cout << "enter w value." << endl;
+		cin >> TDLmagnitude;
+		TDLmagnitudeVect.push_back(TDLmagnitude);
+		cout << " " << endl;
+		cout << "enter beginning of location (from left)." << endl;
+		cin >> TDLbegin;
+		TDLlocation_beginVect.push_back(TDLbegin);
+		cout << "enter end of location (from left)" << endl;
+		cin >> TDLend;
+		TDLlocation_endVect.push_back(TDLend);
+		cout << "is the top edge of the triangle at the beginning or end location. If beginning, enter b, else enter e." << endl;
+		cin >> TDLgradient;
+		TDLgradientVect.push_back(TDLgradient);
 	}
 }
 
@@ -59,6 +84,10 @@ int beamProperties::getPointLoadNumber() const{
 
 int beamProperties::getUDLNumber() const {
 	return UDLnumber;
+}
+
+int beamProperties::getTDLnumber() const {
+	return TDLnumber;
 }
 
 
@@ -82,6 +111,24 @@ void ComputeSupports::UDLSupports() {			//determine the support values for UDL.
 
 	for (int i = 0; i < UDLLeftSupports.size(); i++) {
 		cout << UDLLeftSupports[i] << " left is left, rght is (for UDL load) " << UDLRightSupports[i] << endl;
+	}
+}
+
+void ComputeSupports::TDLSupports() {
+	for (int i = 0; i < TDLnumber; i++) {
+		if (TDLgradientVect[i] == 'e') {		//if the gradient is at the end location and the force is a negative value.
+			TDLLeftSupports.push_back(-(TDLmagnitudeVect[i] * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])*(beamlength - TDLlocation_beginVect[i] - (0.6666666667*(TDLlocation_endVect[i] - TDLlocation_beginVect[i]))) / (2 * beamlength)));	// left support = w*b*e/2L
+			TDLRightSupports.push_back(-(0.5*(TDLlocation_endVect[i] - TDLlocation_beginVect[i])*(TDLmagnitudeVect[i]) - (TDLmagnitudeVect[i] * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])*(beamlength - TDLlocation_beginVect[i] - (0.6666*(TDLlocation_endVect[i] - TDLlocation_beginVect[i]))) / (2 * beamlength))));		//compute right supports.
+		}
+
+		if (TDLgradientVect[i] == 'b') {		//down distributed loading, with the edge of triangle at the beginning location.
+			TDLLeftSupports.push_back(-(0.5*(TDLlocation_endVect[i] - TDLlocation_beginVect[i])*(TDLmagnitudeVect[i]) - (TDLmagnitudeVect[i] * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])*(beamlength - TDLlocation_beginVect[i] - (0.6666*(TDLlocation_endVect[i] - TDLlocation_beginVect[i]))) / (2 * beamlength))));
+			TDLRightSupports.push_back(-(TDLmagnitudeVect[i] * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])*(beamlength - TDLlocation_beginVect[i] - (0.6666666667*(TDLlocation_endVect[i] - TDLlocation_beginVect[i]))) / (2 * beamlength)));	// left support = w*b*e/2L
+		}
+	}
+
+	for (int i = 0; i < TDLLeftSupports.size(); i++) {
+		cout << TDLLeftSupports[i] << " left is left, rght is (for TDL load) " << TDLRightSupports[i] << endl;
 	}
 }
 
@@ -142,22 +189,17 @@ void ShearForces::ComputePointShear() {//computes the shear forces for the point
 
 	int shearsize = 0;			//initialize varialbe called shear size
 	int increment = 0;			//checks the element of pointloadpair
-	bool loop = false;
-	double checkLastLocation = 2;
+	
+
 
 	while (1) {			//this while loop produces the
 		for (int h = 3; h < PointLoadPair.size(); h += 3) {
 			if (increment == h - 1) {		//since we dont want to compute from the last element of the first force to the beginning of the second force.
-				increment = h;				//immediately set the increment to the first force.
-				loop = true;
-				checkLastLocation = h - 1;
-
+				increment = h;				//immediately set the increment to the first force
 			}
 		}
 
-		if (loop == true) {
-			double checkLastLocation = increment;
-		}
+	
 		//cout << j << " " << shearsize << endl;
 
 		for (double i = 0; i < PointLoadPair.size(); i += 3) {	//checks the initial length.
@@ -174,7 +216,7 @@ void ShearForces::ComputePointShear() {//computes the shear forces for the point
 			PointShearSuperposition.push_back(PointShearVect[shearsize]);							//push back the shear force value.
 
 			for (int i = 1; i < PointLoadPair.size(); i += 3) {										//inserts extra shear values due at the transition region of each individual superpostion forces.
-				if (k == PointLoadPair[i].first * 10 && k != PointLoadPair[checkLastLocation].first) {				//if k is a transition location but also not the last location.			
+				if (k == PointLoadPair[i].first * 10) {				//if k is a transition location but also not the last location.			
 					ShearLocationSuperposition.push_back(k / 10);
 					PointShearSuperposition.push_back(PointShearVect[shearsize]);
 				}
@@ -295,10 +337,11 @@ void ShearForces::computeUDLShear() {
 		}
 	}
 	else {
-		for (int i = 1; i <= UDLnumber; i++)
+		for (int i = 1; i <= UDLnumber; i++) {							//for each UDL instance
 			for (double j = 0 * 10; j <= beamlength * 10; j++) {		//push back values of 0 to the beam's length at increments of 0.2
 				UDLSuperpositionLocation.push_back(j / 10);
 			}
+		}
 	}
 
 	for (int i = 0; i < UDLSuperpositionLocation.size(); i++) {			//prints out superpostion lcoation values.
@@ -368,8 +411,85 @@ void ShearForces::computeUDLShear() {
 	}
 }
 
+void ShearForces::computeTDLShear() {
+	if (PointLoadNumber > 0) {
+		for (int i = 1; i <= TDLnumber; i++) {			//this loop pushes back the required locations for the UDL location for each instance, provided that there was a presence of a point force. (since point shears contain the transition region).
+			for (int j = 0; j < PointShearFinalPair.size(); j++) {
+				TDLSuperpositionLocation.push_back(PointShearFinalPair[j].first);
+			}
+		}
+	}
+	else {
+		for (int i = 1; i <= TDLnumber; i++) {
+			for (double j = 0 * 10; j <= beamlength * 10; j++) {		//push back values of 0 to the beam's length at increments of 0.2
+				TDLSuperpositionLocation.push_back(j / 10);
+			}
+		}
+	}
+
+	for (int i = 0; i < TDLSuperpositionLocation.size(); i++) {			//intiialize superposition shear forces to zero.
+		TDLSuperpositionShear.push_back(0);
+	}
+
+	int increment_location_TDL = 0, increment_size_TDL = (TDLSuperpositionLocation.size() / TDLnumber) - 1;
+	int counter_TDL = 1;
+
+	for (int i = 0; i < TDLlocation_beginVect.size(); i++) {		//for each instance of TDL magnitude
+
+		for (int j = increment_location_TDL; j <= increment_size_TDL; j++) {	//for each location of EACH superposition
+
+			if (TDLSuperpositionLocation[j] <= TDLlocation_beginVect[i]) {		//while the location is smaller of equalto the the begining value of the UDL.
+				TDLSuperpositionShear[j] = TDLLeftSupports[i];						//set the shear V be the left support reaction value
+			}
+
+			if ((TDLSuperpositionLocation[j] > TDLlocation_beginVect[i]) && (TDLSuperpositionLocation[j] < TDLlocation_endVect[i])) {	//if it is at the region of UDL
+				if (TDLgradientVect[i] == 'e') {				//if the gradient is at the end
+					TDLSuperpositionShear[j] = TDLLeftSupports[i] + (TDLmagnitudeVect[i] * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]) * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (2 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i]));
+				}	// V = R + w(x - beginning location)^2/0.5*(end - begin), where by w can be both postiive or negative.
+
+				if (TDLgradientVect[i] == 'b') {			//if the gradient is at the beginning
+					TDLSuperpositionShear[j] = TDLLeftSupports[i] + (TDLmagnitudeVect[i] * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) - (TDLmagnitudeVect[i] * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]) * (TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (2 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i]));
+				}
+			}
+
+			if (TDLSuperpositionLocation[j] >= TDLlocation_endVect[i]) {		//after the UDL
+				TDLSuperpositionShear[j] = -TDLRightSupports[i];				//V = -supportreaction
+			}
+
+			if (increment_location_TDL < (TDLSuperpositionLocation.size() - 1) && increment_size_TDL < (TDLSuperpositionLocation.size() - 1)) {	//prevent segfault
+				increment_location_TDL += (TDLSuperpositionLocation.size() / TDLnumber);		//increment the initial superpositino lcoation
+				increment_size_TDL += (TDLSuperpositionLocation.size() / TDLnumber);			//increment the the last element for each superposition
+				cout << increment_location_TDL << endl;
+				cout << increment_size_TDL << endl;
+			}
+		}
+	}
+
+	for (int i = 0; i < TDLSuperpositionLocation.size(); i++) {
+		cout << TDLSuperpositionLocation[i] << "<-- TDL SUPERPOSITION LOCATION || TDL SUPERPOSITION  SHEAR-->" << TDLSuperpositionShear[i] << endl;
+	}
+
+	for (int i = 0; i < (TDLSuperpositionLocation.size() / TDLnumber); i++) {		//this loop initializes the final location and shear values.
+		TDLLocationFinal.push_back(TDLSuperpositionLocation[i]);
+		TDLShearFinal.push_back(TDLSuperpositionShear[i]);
+	}
+
+	for (int k = 1; k < TDLnumber; k++) {			//this loop adds all the superposition values into a final value.
+		for (int i = 0; i <= (TDLSuperpositionLocation.size() / TDLnumber) - 1; i++) {
+			TDLShearFinal[i] += TDLSuperpositionShear[k*(TDLSuperpositionLocation.size() / TDLnumber) + i];
+		}
+	}
+
+	for (int i = 0; i < TDLShearFinal.size(); i++) {			//prints out the final shear force
+		cout << TDLLocationFinal[i] << "<--- final TDL location|| final TDL shear --->" << TDLShearFinal[i] << endl;
+	}
+
+
+
+}
+
 void ShearForces::ParseShearData() {			//parses data to excel
-	if (PointLoadNumber > 0 && UDLnumber == 0) {		//if there is only point load
+	if (PointLoadNumber > 0 && UDLnumber == 0 && TDLnumber == 0) {		//if there is only point load
 		parsedata << "location" << "," << "Shear Force" << endl;
 		parsedata << 0 << "," << 0 << endl;
 		for (int i = 0; i < PointShearFinal.size(); i++) {
@@ -378,7 +498,7 @@ void ShearForces::ParseShearData() {			//parses data to excel
 		parsedata << beamlength << "," << 0 << endl;
 	}
 
-	if (PointLoadNumber == 0 && UDLnumber > 0) {		//if there is only UDL 
+	if (PointLoadNumber == 0 && UDLnumber > 0 && TDLnumber == 0) {		//if there is only UDL 
 		parsedata << "location" << "," << "Shear Force" << endl;
 		parsedata << 0 << "," << 0 << endl;
 		for (int i = 0; i < UDLShearFinal.size(); i++) {
@@ -387,11 +507,47 @@ void ShearForces::ParseShearData() {			//parses data to excel
 		parsedata << beamlength << "," << 0 << endl;
 	}
 
-	if (PointLoadNumber > 0 && UDLnumber > 0) {		//if both loads exists
+	if (PointLoadNumber == 0 && UDLnumber == 0 && TDLnumber > 0) {		//if there is only TDL 
+		parsedata << "location" << "," << "Shear Force" << endl;
+		parsedata << 0 << "," << 0 << endl;
+		for (int i = 0; i < TDLShearFinal.size(); i++) {
+			parsedata << TDLLocationFinal[i] << "," << TDLShearFinal[i] << endl;
+		}
+		parsedata << beamlength << "," << 0 << endl;
+	}
+
+	if (PointLoadNumber > 0 && UDLnumber > 0 && TDLnumber == 0) {		//point load + UDL
 		parsedata << "location" << "," << "Shear Force" << endl;
 		parsedata << 0 << "," << 0 << endl;
 		for (int i = 0; i < PointShearFinalPair.size(); i++) {
 			parsedata << (UDLLocationFinal[i]) << "," << (PointShearFinalPair[i].second += UDLShearFinal[i]) << endl;
+		}
+		parsedata << beamlength << "," << 0 << endl;
+	}
+
+	if (PointLoadNumber > 0 && UDLnumber == 0 && TDLnumber > 0) {		//point load + TDL
+		parsedata << "location" << "," << "Shear Force" << endl;
+		parsedata << 0 << "," << 0 << endl;
+		for (int i = 0; i < PointShearFinalPair.size(); i++) {
+			parsedata << (TDLLocationFinal[i]) << "," << (PointShearFinalPair[i].second += TDLShearFinal[i]) << endl;
+		}
+		parsedata << beamlength << "," << 0 << endl;
+	}
+
+	if (PointLoadNumber == 0 && UDLnumber > 0 && TDLnumber > 0) {		//TDL + UDL
+		parsedata << "location" << "," << "Shear Force" << endl;
+		parsedata << 0 << "," << 0 << endl;
+		for (int i = 0; i < PointShearFinalPair.size(); i++) {
+			parsedata << UDLLocationFinal[i] << "," << (TDLShearFinal[i] += UDLShearFinal[i]) << endl;
+		}
+		parsedata << beamlength << "," << 0 << endl;
+	}
+
+	if (PointLoadNumber > 0 && UDLnumber > 0 && TDLnumber > 0) {		//if all loads exists
+		parsedata << "location" << "," << "Shear Force" << endl;
+		parsedata << 0 << "," << 0 << endl;
+		for (int i = 0; i < PointShearFinalPair.size(); i++) {
+			parsedata << (UDLLocationFinal[i]) << "," << (PointShearFinalPair[i].second += (UDLShearFinal[i] + TDLShearFinal[i])) << endl;
 		}
 		parsedata << beamlength << "," << 0 << endl;
 	}
@@ -450,18 +606,18 @@ void BendingMoments::ComputePointLoadMoments() {
 	}
 }
 
-void BendingMoments::computeUDLMoments() {
-	for (int i = 0; i < UDLSuperpositionLocation.size(); i++) {		//initialize the moments vector
-		UDLSuperPositionMoments.push_back(0);
+void BendingMoments::computeUDLMoments() {							//this member function computes the bending moments for UDL.
+	for (int i = 0; i < UDLSuperpositionLocation.size(); i++) {		//initialize the moments vector to zero.
+		UDLSuperPositionMoments.push_back(0);						
 	}
 
-	int increment_momentslocation = 0;
-	int increment_momentssize = (UDLSuperpositionLocation.size() / UDLnumber) - 1;
+	int increment_momentslocation_UDL = 0;
+	int increment_momentssize_UDL = (UDLSuperpositionLocation.size() / UDLnumber) - 1;
 
-	for (int i = 0; i < UDLlocation_beginVect.size(); i++) {//for each instance of UDL
-		for (int j = increment_momentslocation; j <= increment_momentssize; j++) {
-			if (UDLSuperpositionLocation[j] <= UDLlocation_beginVect[i]) {		//while the location is smaller of equalto the the begining value of the UDL.
-				UDLSuperPositionMoments[j] = UDLLeftSupports[i] * UDLSuperpositionLocation[j];						//set the shear V be the left support reaction value
+	for (int i = 0; i < UDLlocation_beginVect.size(); i++) {						//for each instance of UDL
+		for (int j = increment_momentslocation_UDL; j <= increment_momentssize_UDL; j++) {	//loop for each superposition instance.
+			if (UDLSuperpositionLocation[j] <= UDLlocation_beginVect[i]) {			//while the location is smaller or equal to the the begining value of the UDL.
+				UDLSuperPositionMoments[j] = UDLLeftSupports[i] * UDLSuperpositionLocation[j];						//set the shear V be the left support reaction value, M = Vx
 			}
 
 			if ((UDLSuperpositionLocation[j] > UDLlocation_beginVect[i]) && (UDLSuperpositionLocation[j] < UDLlocation_endVect[i])) {	//if it is at the region of UDL
@@ -472,17 +628,17 @@ void BendingMoments::computeUDLMoments() {
 				UDLSuperPositionMoments[j] = UDLRightSupports[i] * (beamlength - UDLSuperpositionLocation[j]);				//V = -supportreaction
 
 			}
-			if (increment_momentslocation < (UDLSuperpositionLocation.size() - 1) && increment_momentssize < (UDLSuperpositionLocation.size() - 1)) {	//prevent segfault
-				increment_momentslocation += (UDLSuperpositionLocation.size() / UDLnumber);		//increment the initial superpositino lcoation
-				increment_momentssize += (UDLSuperpositionLocation.size() / UDLnumber);			//increment the the last element for each superposition
+			if (increment_momentslocation_UDL < (UDLSuperpositionLocation.size() - 1) && increment_momentssize_UDL < (UDLSuperpositionLocation.size() - 1)) {	//prevent segfault, 
+				increment_momentslocation_UDL += (UDLSuperpositionLocation.size() / UDLnumber);		//increment the initial superpositino lcoation to compute the next superposition value.
+				increment_momentssize_UDL += (UDLSuperpositionLocation.size() / UDLnumber);			//increment the the last element for each superposition	to compute the next superposition component.
 				//cout << increment_momentslocation << endl;
 				//cout << increment_momentssize << endl;
 			}
 		}
 	}
 
-	for (int i = 0; i < UDLSuperPositionMoments.size(); i++) {
-		cout << UDLSuperpositionLocation[i] << "<-- SuperPositionLocation UDL || Superposition moments UDL -->" << UDLSuperPositionMoments[i] << endl;
+	for (int i = 0; i < UDLSuperPositionMoments.size(); i++) {			//prints the superposition values.
+		cout << UDLSuperpositionLocation[i] << "<-- SuperPositionLocation TDL || Superposition moments TDL -->" << UDLSuperPositionMoments[i] << endl;
 	}
 
 	for (int i = 0; i < (UDLSuperPositionMoments.size() / UDLnumber); i++) {		//this loop initializes the final location and shear values.
@@ -496,27 +652,104 @@ void BendingMoments::computeUDLMoments() {
 	}
 }
 
+void BendingMoments::computeTDLMoments() {
+	for (int i = 0; i < TDLSuperpositionLocation.size(); i++) {		//initialize the superposition moments to zero.
+		TDLSuperPositionMoments.push_back(0);
+	}
+	
+	int increment_momentslocation_TDL = 0;
+	int increment_momentssize_TDL = (TDLSuperpositionLocation.size() / TDLnumber) - 1;
+
+	for (int i = 0; i < TDLlocation_beginVect.size(); i++) {						//for each instance of TDL
+		for (int j = increment_momentslocation_TDL; j <= increment_momentssize_TDL; j++) {	//loop for each superposition instance.
+			if (TDLSuperpositionLocation[j] <= TDLlocation_beginVect[i]) {			//while the location is smaller or equal to the the begining value of the UDL.
+				TDLSuperPositionMoments[j] = TDLLeftSupports[i] * TDLSuperpositionLocation[j];						//set the shear V be the left support reaction value, M = Vx
+			}
+
+			if ((TDLSuperpositionLocation[j] > TDLlocation_beginVect[i]) && (TDLSuperpositionLocation[j] < TDLlocation_endVect[i])) {	//if it is at the region of TDL
+				if (TDLgradientVect[i] == 'e') {
+					TDLSuperPositionMoments[j] = ((TDLLeftSupports[i] * TDLSuperpositionLocation[j]) + ((TDLmagnitudeVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (6 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])));		// V = Rx + w(x - beginning location)^3/ (6*end - begin), where by w can be both postiive or negative.
+				}
+
+				if (TDLgradientVect[i] == 'b') {
+					TDLSuperPositionMoments[j] = ((TDLLeftSupports[i] * TDLSuperpositionLocation[j]) + (0.5*TDLmagnitudeVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i]) - ((TDLmagnitudeVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])*(TDLSuperpositionLocation[j] - TDLlocation_beginVect[i])) / (6 * (TDLlocation_endVect[i] - TDLlocation_beginVect[i])));	//Rx + w(x - begin) - w*(x - beginning location)^3/ (6*end - begin)
+				}
+			}
+
+			if (TDLSuperpositionLocation[j] >= TDLlocation_endVect[i]) {		//after the UDL
+				TDLSuperPositionMoments[j] = TDLRightSupports[i] * (beamlength - TDLSuperpositionLocation[j]);				//V = -supportreaction
+			}
+
+			if (increment_momentslocation_TDL < (TDLSuperpositionLocation.size() - 1) && increment_momentssize_TDL < (TDLSuperpositionLocation.size() - 1)) {	//prevent segfault, 
+				increment_momentslocation_TDL += (TDLSuperpositionLocation.size() / TDLnumber);		//increment the initial superpositino lcoation to compute the next superposition value.
+				increment_momentssize_TDL += (TDLSuperpositionLocation.size() / TDLnumber);			//increment the the last element for each superposition	to compute the next superposition component.
+			}
+		}
+	}
+
+	for (int i = 0; i < (TDLSuperPositionMoments.size() / TDLnumber); i++) {		//this loop initializes the final location and shear values.
+		TDLMomentsFinal.push_back(TDLSuperPositionMoments[i]);
+	}
+
+	for (int k = 1; k < TDLnumber; k++) {			//this loop adds all the superposition values into a final value.
+		for (int i = 0; i <= (TDLSuperPositionMoments.size() / TDLnumber) - 1; i++) {
+			TDLMomentsFinal[i] += TDLSuperPositionMoments[k*(TDLSuperPositionMoments.size() / TDLnumber) + i];
+		}
+	}
+}
+
 void BendingMoments::ParseMomentsData() {
-	if (PointLoadNumber > 0 && UDLnumber == 0) {		//if there is only point load
+	if (PointLoadNumber > 0 && UDLnumber == 0 && TDLnumber == 0) {		//if there is only point load
 		parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
 		for (int i = 0; i < PointShearFinal.size(); i++) {
 			parsedata << "," << "," << "," << PointShearFinalPair[i].first << "," << PointMomentsFinal[i] << endl;
 		}
 	}
 
-	if (PointLoadNumber == 0 && UDLnumber > 0) {		//if there is only UDL 
+	if (PointLoadNumber == 0 && UDLnumber > 0 && TDLnumber == 0) {		//if there is only UDL 
 		parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
 		for (int i = 0; i < UDLShearFinal.size(); i++) {
 			parsedata << "," << "," << "," << UDLLocationFinal[i] << "," << UDLMomentsFinal[i] << endl;
 		}
+
 	}
 
-	if (PointLoadNumber > 0 && UDLnumber > 0) {		//if both loads exists
+	if (PointLoadNumber == 0 && UDLnumber == 0 && TDLnumber > 0) {		//if there is only TDL
+		parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
+		for (int i = 0; i < TDLShearFinal.size(); i++) {
+			parsedata << "," << "," << "," << TDLLocationFinal[i] << "," << TDLMomentsFinal[i] << endl;
+		}
+	}
+
+	if (PointLoadNumber > 0 && UDLnumber > 0 && TDLnumber == 0) {		//point + UDL
 		parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
 		for (int i = 0; i < UDLLocationFinal.size(); i++) {
 			parsedata << "," << "," << "," << (UDLLocationFinal[i]) << "," << (PointMomentsFinal[i] += UDLMomentsFinal[i]) << endl;
 		}
 	}
+
+	if (PointLoadNumber > 0 && UDLnumber == 0 && TDLnumber > 0) {		//point + TDL
+		parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
+		for (int i = 0; i < TDLLocationFinal.size(); i++) {
+			parsedata << "," << "," << "," << (TDLLocationFinal[i]) << "," << (PointMomentsFinal[i] += TDLMomentsFinal[i]) << endl;
+		}
+	}
+
+	if (PointLoadNumber == 0 && UDLnumber > 0 && TDLnumber > 0) {		//UDL + TDL
+		parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
+		for (int i = 0; i < TDLLocationFinal.size(); i++) {
+			parsedata << "," << "," << "," << (TDLLocationFinal[i]) << "," << (UDLMomentsFinal[i] += TDLMomentsFinal[i]) << endl;
+		}
+	}
+
+	if (PointLoadNumber > 0 && UDLnumber > 0 && TDLnumber > 0) {		//all 3 loads present
+		parsedata << "," << "," << "," << "location" << "," << "bending moments" << endl;
+		for (int i = 0; i < TDLLocationFinal.size(); i++) {
+			parsedata << "," << "," << "," << (TDLLocationFinal[i]) << "," << (PointMomentsFinal[i] += (UDLMomentsFinal[i] + TDLMomentsFinal[i])) << endl;
+		}
+	}
+
 }
+
 
 
